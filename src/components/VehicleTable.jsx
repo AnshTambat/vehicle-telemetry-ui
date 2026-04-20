@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { getVehicles, getLatestReading } from '../services/api';
 
 export default function VehicleTable({ onSelect, selectedId }) {
@@ -17,7 +17,7 @@ export default function VehicleTable({ onSelect, selectedId }) {
             lastSeen:   r.timestamp 
           };
         } catch {
-          return { ...v, speed: '—', engineTemp: '—', lastSeen: '—' };
+          return { ...v, speed: 'â€”', engineTemp: 'â€”', lastSeen: 'â€”' };
         }
       }));
       setRows(enriched);
@@ -34,7 +34,7 @@ export default function VehicleTable({ onSelect, selectedId }) {
           <th style={th}>Vehicle</th>
           <th style={th}>License Plate</th>
           <th style={th}>Speed (km/h)</th>
-          <th style={th}>Engine Temp (°C)</th>
+          <th style={th}>Engine Temp (Â°C)</th>
           <th style={th}>Last Seen</th>
         </tr>
       </thead>
@@ -52,7 +52,7 @@ export default function VehicleTable({ onSelect, selectedId }) {
             <td style={td}>{v.licensePlate}</td>
             <td style={td}>{typeof v.speed      === 'number' ? v.speed.toFixed(1)      : v.speed}</td>
             <td style={td}>{typeof v.engineTemp === 'number' ? v.engineTemp.toFixed(1) : v.engineTemp}</td>
-            <td style={td}>{v.lastSeen !== '—' ? new Date(v.lastSeen).toLocaleString() : '—'}</td>
+            <td style={td}>{v.lastSeen !== 'â€”' ? new Date(v.lastSeen).toLocaleString() : 'â€”'}</td>
           </tr>
         ))}
       </tbody>

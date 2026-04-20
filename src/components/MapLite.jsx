@@ -1,4 +1,4 @@
-export default function MapLite({ readings }) {
+﻿export default function MapLite({ readings }) {
   if (!readings?.length) 
     return <p style={{ color: '#888' }}>No GPS data available.</p>;
 
@@ -10,7 +10,7 @@ export default function MapLite({ readings }) {
           <th style={th}>Latitude</th>
           <th style={th}>Longitude</th>
           <th style={th}>Speed (km/h)</th>
-          <th style={th}>Engine Temp (°C)</th>
+          <th style={th}>Engine Temp (Â°C)</th>
           <th style={th}>Time</th>
         </tr>
       </thead>
