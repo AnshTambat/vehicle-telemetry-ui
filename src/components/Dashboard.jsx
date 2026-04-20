@@ -1,31 +1,54 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import {
   getVehicles, getLatestReading, getVehicleSummary,
   getTop5Today, getReadings
 } from '../services/api';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip,
-  ResponsiveContainer, Cell
+  ResponsiveContainer, Cell, LineChart, Line, Legend
 } from 'recharts';
 
-export default function Dashboard() {
-  const [vehicles, setVehicles]     = useState([]);
-  const [stats, setStats]           = useState({ active: 0, total: 0, readings: 0, peakSpeed: 0, peakVehicle: '', alerts: 0, criticalAlerts: 0 });
-  const [alerts, setAlerts]         = useState([]);
-  const [top5, setTop5]             = useState([]);
-  const [hourlyData, setHourlyData] = useState([]);
-  const [loading, setLoading]       = useState(true);
-  const [expandedId, setExpandedId] = useState(null);
-  const [summaries, setSummaries]   = useState({});
-  const [timeRange, setTimeRange]   = useState('today');
+const LINE_COLORS = ['#2563eb', '#16a34a', '#dc2626', '#9333ea', '#f59e0b'];
+const REFRESH_SEC = 15;
 
-  useEffect(() => { loadDashboard(); }, []);
+export default function Dashboard() {
+  const [vehicles, setVehicles]       = useState([]);
+  const [stats, setStats]             = useState({ active: 0, total: 0, readings: 0, peakSpeed: 0, peakVehicle: '', alerts: 0, criticalAlerts: 0 });
+  const [alerts, setAlerts]           = useState([]);
+  const [top5, setTop5]               = useState([]);
+  const [hourlyData, setHourlyData]   = useState([]);
+  const [trendData, setTrendData]     = useState({ points: [], vehicleNames: [] });
+  const [loading, setLoading]         = useState(true);
+  const [expandedId, setExpandedId]   = useState(null);
+  const [summaries, setSummaries]     = useState({});
+  const [countdown, setCountdown]     = useState(REFRESH_SEC);
+  const [lastUpdated, setLastUpdated] = useState(null);
+
+  const refreshRef   = useRef(null);
+  const countdownRef = useRef(null);
+
+  useEffect(() => {
+    loadDashboard();
+
+    refreshRef.current = setInterval(() => {
+      loadDashboard();
+      setCountdown(REFRESH_SEC);
+    }, REFRESH_SEC * 1000);
+
+    countdownRef.current = setInterval(() => {
+      setCountdown(c => (c <= 1 ? REFRESH_SEC : c - 1));
+    }, 1000);
+
+    return () => {
+      clearInterval(refreshRef.current);
+      clearInterval(countdownRef.current);
+    };
+  }, []);
 
   async function loadDashboard() {
     try {
       const { data: vehs } = await getVehicles();
 
-      // Enrich each vehicle with latest reading
       const enriched = await Promise.all(vehs.map(async v => {
         try {
           const { data: r } = await getLatestReading(v.vehicleId);
@@ -40,19 +63,20 @@ export default function Dashboard() {
       }));
 
       setVehicles(enriched);
+      setLastUpdated(new Date());
 
-      // Compute stats
       const activeCount = enriched.filter(v => v.status !== 'offline').length;
-      let totalReadings = 0;
-      let peakSpeed = 0;
-      let peakVehicle = '';
+      let totalReadings = 0, peakSpeed = 0, peakVehicle = '';
       const generatedAlerts = [];
 
       for (const v of enriched) {
         try {
           const { data: summary } = await getVehicleSummary(v.vehicleId);
           totalReadings += summary.totalReadings || 0;
-          if (summary.maxSpeed > peakSpeed) { peakSpeed = summary.maxSpeed; peakVehicle = v.name; }
+          if ((summary.peakSpeed || 0) > peakSpeed) {
+            peakSpeed = summary.peakSpeed;
+            peakVehicle = v.name;
+          }
         } catch { /* skip */ }
 
         if (v.engineTemp !== null && v.engineTemp > 100) {
@@ -62,13 +86,13 @@ export default function Dashboard() {
         }
         if (v.speed !== null && v.speed > 100) {
           generatedAlerts.push({ id: `speed-${v.vehicleId}`, type: 'warning', icon: 'speed',
-            message: `Overspeed detected — ${v.name} (${v.speed.toFixed(0)} km/h)`,
+            message: `Overspeed — ${v.name} (${v.speed.toFixed(0)} km/h)`,
             time: timeSince(v.lastSeen) });
         }
         if (v.status === 'offline') {
           const mins = v.lastSeen ? Math.round((Date.now() - new Date(v.lastSeen).getTime()) / 60000) : null;
           generatedAlerts.push({ id: `offline-${v.vehicleId}`, type: 'info', icon: 'offline',
-            message: `${v.name} offline${mins ? ` — no readings for ${mins} min` : ''}`,
+            message: `${v.name} offline${mins ? ` — ${mins} min` : ''}`,
             time: mins ? `${mins} min ago` : '' });
         }
       }
@@ -81,31 +105,22 @@ export default function Dashboard() {
         criticalAlerts: generatedAlerts.filter(a => a.type === 'critical').length
       });
 
-      // Top 5 speed — try the dedicated endpoint first, fall back to summaries
       try {
         const { data: t5 } = await getTop5Today();
         if (Array.isArray(t5) && t5.length > 0) {
           setTop5(t5.slice(0, 5));
         } else {
-          // Fallback: build top 5 from the summaries we already fetched
-          const ranked = enriched
-            .filter(v => v.speed !== null)
+          setTop5(enriched.filter(v => v.speed !== null)
             .map(v => ({ vehicleName: v.name, maxSpeed: v.speed }))
-            .sort((a, b) => b.maxSpeed - a.maxSpeed)
-            .slice(0, 5);
-          setTop5(ranked);
+            .sort((a, b) => b.maxSpeed - a.maxSpeed).slice(0, 5));
         }
       } catch {
-        const ranked = enriched
-          .filter(v => v.speed !== null)
+        setTop5(enriched.filter(v => v.speed !== null)
           .map(v => ({ vehicleName: v.name, maxSpeed: v.speed }))
-          .sort((a, b) => b.maxSpeed - a.maxSpeed)
-          .slice(0, 5);
-        setTop5(ranked);
+          .sort((a, b) => b.maxSpeed - a.maxSpeed).slice(0, 5));
       }
 
-      // Build hourly readings count from all vehicles
-      buildHourlyData(enriched);
+      buildReadingsData(enriched);
 
     } catch (err) {
       console.error('Dashboard load error:', err);
@@ -114,19 +129,42 @@ export default function Dashboard() {
     }
   }
 
-  async function buildHourlyData(vehs) {
+  async function buildReadingsData(vehs) {
+    const from = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
     const hours = Array.from({ length: 24 }, (_, i) => ({ hour: i, label: `${i}:00`, count: 0 }));
-    for (const v of vehs) {
-      try {
-        // Fetch all available readings (no date filter) so the chart works even with older data
-        const { data: readings } = await getReadings(v.vehicleId);
-        readings.forEach(r => {
-          const h = new Date(r.timestamp).getHours();
-          hours[h].count++;
-        });
-      } catch { /* skip */ }
-    }
+
+    const vehicleReadings = await Promise.all(
+      vehs.map(async (v) => {
+        try {
+          const { data } = await getReadings(v.vehicleId, from);
+          data.forEach(r => { hours[new Date(r.timestamp).getHours()].count++; });
+          const recent = [...data]
+            .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp))
+            .slice(-20);
+          return { name: v.name, readings: recent };
+        } catch {
+          return { name: v.name, readings: [] };
+        }
+      })
+    );
+
     setHourlyData(hours);
+
+    // Build speed trend chart
+    const longest = vehicleReadings.reduce((a, b) => a.readings.length > b.readings.length ? a : b, { readings: [] });
+    if (longest.readings.length > 0) {
+      const points = longest.readings.map((ref, i) => {
+        const time = new Date(ref.timestamp).toLocaleTimeString('en-US', {
+          hour: '2-digit', minute: '2-digit', hour12: false
+        });
+        const point = { time };
+        vehicleReadings.forEach(vr => {
+          if (vr.readings[i]) point[vr.name] = parseFloat(vr.readings[i].speed?.toFixed(1));
+        });
+        return point;
+      });
+      setTrendData({ points, vehicleNames: vehicleReadings.map(v => v.name) });
+    }
   }
 
   async function toggleExpand(vehicleId) {
@@ -142,44 +180,100 @@ export default function Dashboard() {
     }
   }
 
-  if (loading) return <div className="dash-loading">Loading dashboard...</div>;
+  if (loading) return (
+    <div className="dash-loading">
+      <div className="loading-ring"></div>
+      <p>Loading live dashboard…</p>
+    </div>
+  );
 
   const currentHour = new Date().getHours();
-  const today = new Date();
-  const dateStr = today.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+  const dateStr = new Date().toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+  const updatedStr = lastUpdated?.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
   return (
     <div className="dashboard">
-      {/* Header */}
+
+      {/* ── Header ── */}
       <div className="dash-header">
         <div>
-          <h2>Dashboard</h2>
-          <p className="dash-date">{dateStr} &middot; Chennai fleet</p>
+          <div className="dash-title-row">
+            <h2>Dashboard</h2>
+            <span className="live-badge"><span className="live-dot"></span>LIVE</span>
+          </div>
+          <p className="dash-date">
+            {dateStr} &middot; Chennai fleet
+            &middot; refreshes in <strong>{countdown}s</strong>
+            {lastUpdated && <> &middot; updated {updatedStr}</>}
+          </p>
         </div>
-        <div className="time-range-toggle">
-          {['today', 'week', 'month'].map(r => (
-            <button key={r} className={`range-btn${timeRange === r ? ' active' : ''}`}
-              onClick={() => setTimeRange(r)}>
-              {r === 'today' ? 'Today' : r === 'week' ? 'This week' : 'This month'}
-            </button>
+      </div>
+
+      {/* ── Stat strip ── */}
+      <div className="stat-strip">
+        <StatCard label="Active vehicles"   value={stats.active}                  sub={`of ${stats.total} total`} color="var(--accent)" />
+        <StatCard label="Total readings"    value={stats.readings.toLocaleString()} sub="all time"                color="#6366f1" />
+        <StatCard label="Peak speed today"  value={`${stats.peakSpeed} km/h`}      sub={stats.peakVehicle}        color="#f59e0b" />
+        <StatCard label="Active alerts"     value={stats.alerts}                   sub={`${stats.criticalAlerts} critical`} color="#ef4444" />
+      </div>
+
+      {/* ── Feature 1: Engine Temp Gauges ── */}
+      <div className="card dash-gauges-card">
+        <div className="card-head">
+          <h3>Engine Temperature</h3>
+          <span className="card-tag">Live · auto-updates</span>
+        </div>
+        <div className="gauges-row">
+          {vehicles.map(v => (
+            <TempGauge key={v.vehicleId} name={v.name} temp={v.engineTemp} status={v.status} />
           ))}
         </div>
+        <div className="gauge-legend">
+          <span className="gl-item gl-normal">Normal  &lt;87°C</span>
+          <span className="gl-item gl-warn">Warning  87–100°C</span>
+          <span className="gl-item gl-crit">Critical  &gt;100°C</span>
+        </div>
       </div>
 
-      {/* Stat strip */}
-      <div className="stat-strip">
-        <StatCard label="Active vehicles" value={stats.active} sub={`of ${stats.total} total`} color="var(--accent)" />
-        <StatCard label="Total readings today" value={stats.readings.toLocaleString()} sub="last 24 h" color="#6366f1" />
-        <StatCard label="Peak speed today" value={`${stats.peakSpeed} km/h`} sub={stats.peakVehicle} color="#f59e0b" />
-        <StatCard label="Active alerts" value={stats.alerts} sub={`${stats.criticalAlerts} critical`} color="#ef4444" />
-      </div>
+      {/* ── Feature 2: Speed Trend Line Chart ── */}
+      {trendData.points.length > 0 && (
+        <div className="card dash-trend-card">
+          <div className="card-head">
+            <h3>Speed Trend</h3>
+            <span className="card-tag">Last 20 readings per vehicle · km/h</span>
+          </div>
+          <ResponsiveContainer width="100%" height={210}>
+            <LineChart data={trendData.points} margin={{ top: 8, right: 20, bottom: 0, left: -10 }}>
+              <XAxis dataKey="time" tick={{ fontSize: 10 }} interval={3} />
+              <YAxis tick={{ fontSize: 10 }} unit=" km/h" domain={[0, 'auto']} width={60} />
+              <Tooltip
+                formatter={(val, name) => [`${val} km/h`, name]}
+                contentStyle={{ fontSize: 12, borderRadius: 8 }}
+              />
+              <Legend wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
+              {trendData.vehicleNames.map((name, i) => (
+                <Line
+                  key={name}
+                  type="monotone"
+                  dataKey={name}
+                  stroke={LINE_COLORS[i % LINE_COLORS.length]}
+                  strokeWidth={2.5}
+                  dot={false}
+                  activeDot={{ r: 5 }}
+                />
+              ))}
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      )}
 
-      {/* Row: Fleet status + Active alerts */}
-      <div className="dash-row">
-        <div className="card dash-card-fleet">
+      {/* ── Row A: Fleet (wide) | Alerts | Top 5 ── */}
+      <div className="dash-row-main">
+
+        {/* Fleet status */}
+        <div className="card">
           <div className="card-head">
             <h3>Fleet status</h3>
-            <button className="card-link">Manage fleet &#x2197;</button>
           </div>
           <div className="fleet-list">
             {vehicles.map(v => (
@@ -190,21 +284,21 @@ export default function Dashboard() {
                     <span className="fleet-plate">{v.licensePlate}</span>
                   </div>
                   <div className="fleet-stats">
-                    <span className="fleet-speed">{v.speed !== null ? `${v.speed.toFixed(0)} km/h` : '— km/h'}</span>
-                    <span className="fleet-temp">{v.engineTemp !== null ? `${v.engineTemp.toFixed(0)}°C` : '—°C'}</span>
+                    <span className="fleet-speed">{v.speed !== null ? `${v.speed.toFixed(0)} km/h` : '—'}</span>
+                    <span className="fleet-temp">{v.engineTemp !== null ? `${v.engineTemp.toFixed(0)}°C` : '—'}</span>
                   </div>
-                  <StatusBadge status={v.status} />
+                  <PulseBadge status={v.status} />
                 </div>
                 {expandedId === v.vehicleId && (
                   <div className="fleet-expanded">
                     {summaries[v.vehicleId] ? (
                       <div className="fleet-summary-grid">
-                        <div><span className="summary-label">Avg Speed</span><span className="summary-val">{summaries[v.vehicleId].avgSpeed?.toFixed(1)} km/h</span></div>
-                        <div><span className="summary-label">Max Speed</span><span className="summary-val">{summaries[v.vehicleId].maxSpeed?.toFixed(1)} km/h</span></div>
+                        <div><span className="summary-label">Peak Speed</span><span className="summary-val">{summaries[v.vehicleId].peakSpeed?.toFixed(1)} km/h</span></div>
                         <div><span className="summary-label">Avg Temp</span><span className="summary-val">{summaries[v.vehicleId].avgEngineTemp?.toFixed(1)}°C</span></div>
                         <div><span className="summary-label">Readings</span><span className="summary-val">{summaries[v.vehicleId].totalReadings}</span></div>
+                        <div><span className="summary-label">Last seen</span><span className="summary-val">{timeSince(summaries[v.vehicleId].lastSeen)}</span></div>
                       </div>
-                    ) : <p className="fleet-summary-loading">Loading summary...</p>}
+                    ) : <p className="fleet-summary-loading">Loading…</p>}
                   </div>
                 )}
               </div>
@@ -212,10 +306,11 @@ export default function Dashboard() {
           </div>
         </div>
 
-        <div className="card dash-card-alerts">
+        {/* Active alerts */}
+        <div className="card">
           <div className="card-head">
             <h3>Active alerts</h3>
-            <button className="card-link">View all &#x2197;</button>
+            <span className="card-tag">{stats.alerts} total</span>
           </div>
           <div className="alert-list">
             {alerts.length === 0 && <p className="no-alerts">No active alerts</p>}
@@ -230,72 +325,81 @@ export default function Dashboard() {
             ))}
           </div>
         </div>
-      </div>
 
-      {/* Row: Top 5 speed + Readings per hour */}
-      <div className="dash-row">
-        <div className="card dash-card-half">
+        {/* Top 5 peak speed */}
+        <div className="card">
           <div className="card-head">
-            <h3>Top 5 by peak speed today</h3>
-            <button className="card-link">Full analytics &#x2197;</button>
+            <h3>Top 5 peak speed</h3>
+            <span className="card-tag">today</span>
           </div>
           {top5.length > 0 ? (
             <div className="top5-bars">
-              {top5.map((v, i) => (
-                <div key={i} className="top5-row">
-                  <span className="top5-name">{v.vehicleName || v.name || `Vehicle ${i + 1}`}</span>
-                  <div className="top5-bar-track">
-                    <div className="top5-bar-fill" style={{ width: `${Math.min(100, ((v.maxSpeed || v.peakSpeed || 0) / Math.max(...top5.map(t => t.maxSpeed || t.peakSpeed || 1))) * 100)}%` }} />
+              {top5.map((v, i) => {
+                const spd = v.maxSpeed || v.peakSpeed || 0;
+                const maxSpd = Math.max(...top5.map(t => t.maxSpeed || t.peakSpeed || 1));
+                return (
+                  <div key={i} className="top5-row">
+                    <span className="top5-rank">#{i + 1}</span>
+                    <span className="top5-name">{v.vehicleName || v.name || `V${i + 1}`}</span>
+                    <div className="top5-bar-track">
+                      <div className="top5-bar-fill" style={{ width: `${Math.min(100, (spd / maxSpd) * 100)}%` }} />
+                    </div>
+                    <span className="top5-val">{spd.toFixed(0)}</span>
                   </div>
-                  <span className="top5-val">{(v.maxSpeed || v.peakSpeed || 0).toFixed(0)}</span>
-                </div>
-              ))}
+                );
+              })}
             </div>
-          ) : <p style={{ color: 'var(--text)', fontSize: 13 }}>No data available</p>}
+          ) : <p style={{ color: 'var(--text)', fontSize: 13 }}>No data yet</p>}
         </div>
+      </div>
 
-        <div className="card dash-card-half">
+      {/* ── Row B: Hourly bar (wide) | GPS positions ── */}
+      <div className="dash-row-bottom">
+        <div className="card">
           <div className="card-head">
-            <h3>Readings per hour (today)</h3>
-            <button className="card-link">View trend &#x2197;</button>
+            <h3>Readings per hour</h3>
+            <span className="card-tag">today</span>
           </div>
           {hourlyData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={160}>
-              <BarChart data={hourlyData} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
+            <ResponsiveContainer width="100%" height={180}>
+              <BarChart data={hourlyData} margin={{ top: 4, right: 8, bottom: 0, left: -20 }}>
                 <XAxis dataKey="label" tick={{ fontSize: 10 }} interval={2} />
                 <YAxis tick={{ fontSize: 10 }} />
                 <Tooltip formatter={(val) => [`${val} readings`, 'Count']}
                   contentStyle={{ fontSize: 12, borderRadius: 6 }} />
                 <Bar dataKey="count" radius={[3, 3, 0, 0]}>
-                  {hourlyData.map((entry, i) => (
-                    <Cell key={i} fill={i >= currentHour - 2 && i <= currentHour ? '#2563eb' : '#d1d5db'} />
+                  {hourlyData.map((_, i) => (
+                    <Cell key={i}
+                      fill={i === currentHour ? '#2563eb' : i < currentHour ? '#93c5fd' : 'var(--bar-track)'} />
                   ))}
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
-          ) : <p style={{ color: 'var(--text)', fontSize: 13 }}>No data available</p>}
+          ) : <p style={{ color: 'var(--text)', fontSize: 13 }}>No data yet</p>}
         </div>
-      </div>
 
-      {/* Map preview */}
-      <div className="card dash-card-map">
-        <div className="card-head">
-          <h3>Last known positions</h3>
-        </div>
-        
-        <div className="map-coords">
-          {vehicles.map(v => (
-            <span key={v.vehicleId} className="coord-tag">
-              {v.name}: {v.lat ? `${parseFloat(v.lat).toFixed(4)}°N ${parseFloat(v.lon).toFixed(4)}°E` : 'no position'}
-            </span>
-          ))}
+        {/* GPS positions */}
+        <div className="card">
+          <div className="card-head"><h3>Last known positions</h3></div>
+          <div className="gps-list">
+            {vehicles.map(v => (
+              <div key={v.vehicleId} className="gps-item">
+                <span className="gps-name">{v.name}</span>
+                {v.lat
+                  ? <span className="gps-coords">{parseFloat(v.lat).toFixed(4)}°N &nbsp;{parseFloat(v.lon).toFixed(4)}°E</span>
+                  : <span className="gps-offline">no position</span>}
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>
   );
 }
 
-/* ── Small sub-components ── */
+/* ══════════════════════════════════════
+   Sub-components
+══════════════════════════════════════ */
 
 function StatCard({ label, value, sub, color }) {
   return (
@@ -307,14 +411,72 @@ function StatCard({ label, value, sub, color }) {
   );
 }
 
-function StatusBadge({ status }) {
-  const map = {
-    online:  { label: 'Online',  cls: 'badge-online' },
-    warning: { label: 'Warning', cls: 'badge-warning' },
-    offline: { label: 'Offline', cls: 'badge-offline' },
+/* Feature 4 — Pulsing status badge */
+function PulseBadge({ status }) {
+  const cfg = {
+    online:  { label: 'Online',  dot: 'pdot-online',  cls: 'badge-online' },
+    warning: { label: 'Warning', dot: 'pdot-warning', cls: 'badge-warning' },
+    offline: { label: 'Offline', dot: 'pdot-offline', cls: 'badge-offline' },
   };
-  const b = map[status] || map.offline;
-  return <span className={`status-badge ${b.cls}`}>{b.label}</span>;
+  const b = cfg[status] || cfg.offline;
+  return (
+    <span className={`pulse-badge ${b.cls}`}>
+      <span className={`pdot ${b.dot}`}></span>
+      {b.label}
+    </span>
+  );
+}
+
+/* Feature 3 — SVG radial temperature gauge */
+function TempGauge({ name, temp, status }) {
+  const MIN = 60, MAX = 120;
+  const r = 42, cx = 60, cy = 60;
+  const circ = 2 * Math.PI * r;
+  const arc  = circ * 0.75;                                       // 270° sweep
+  const t = temp ?? 0;
+  const progress = Math.max(0, Math.min(1, (t - MIN) / (MAX - MIN)));
+  const fill  = arc * progress;
+  const color = t > 100 ? '#ef4444' : t > 87 ? '#f59e0b' : '#22c55e';
+  const sub   = t > 100 ? 'Critical' : t > 87 ? 'Warning' : 'Normal';
+
+  return (
+    <div className="gauge-wrap">
+      <svg width="120" height="112" viewBox="0 0 120 112">
+        {/* Track arc */}
+        <circle cx={cx} cy={cy} r={r} fill="none"
+          stroke="var(--bar-track)" strokeWidth="10" strokeLinecap="round"
+          strokeDasharray={`${arc} ${circ}`}
+          transform={`rotate(135 ${cx} ${cy})`} />
+        {/* Value arc */}
+        <circle cx={cx} cy={cy} r={r} fill="none"
+          stroke={color} strokeWidth="10" strokeLinecap="round"
+          strokeDasharray={`${fill} ${circ}`}
+          transform={`rotate(135 ${cx} ${cy})`}
+          style={{ transition: 'stroke-dasharray 0.7s ease, stroke 0.4s ease' }} />
+        {/* Centre text */}
+        {temp !== null ? (
+          <>
+            <text x={cx} y={cy - 2} textAnchor="middle" dominantBaseline="middle"
+              fontSize="20" fontWeight="700" fill={color} fontFamily="system-ui">
+              {Math.round(t)}°C
+            </text>
+            <text x={cx} y={cy + 17} textAnchor="middle"
+              fontSize="10" fill="#9ca3af" fontFamily="system-ui">
+              {sub}
+            </text>
+          </>
+        ) : (
+          <text x={cx} y={cy + 4} textAnchor="middle" dominantBaseline="middle"
+            fontSize="12" fill="#9ca3af" fontFamily="system-ui">offline</text>
+        )}
+      </svg>
+      <p className="gauge-name">{name}</p>
+      <span className={`gauge-status-dot pdot ${
+        status === 'online'  ? 'pdot-online'  :
+        status === 'warning' ? 'pdot-warning' : 'pdot-offline'}`}
+      />
+    </div>
+  );
 }
 
 function AlertIcon({ type }) {

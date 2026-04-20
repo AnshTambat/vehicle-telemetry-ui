@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
 import Dashboard from './components/Dashboard';
 import AlertsPage from './components/AlertsPage';
+import ReportsPage from './components/ReportsPage';
+import AboutPage from './components/AboutPage';
+import Logo from './components/Logo';
 import { getVehicles, getLatestReading } from './services/api';
 import './App.css';
 
@@ -61,8 +64,8 @@ function MoonIcon() {
 }
 
 export default function App() {
-  const [page, setPage] = useState('dashboard');
-  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light');
+  const [page, setPage]             = useState('dashboard');
+  const [theme, setTheme]           = useState(() => localStorage.getItem('theme') || 'light');
   const [alertCount, setAlertCount] = useState(0);
 
   useEffect(() => {
@@ -121,7 +124,13 @@ export default function App() {
       {/* Sidebar */}
       <aside className="sidebar">
         <div className="sidebar-brand">
-          <h1>VehicleIQ</h1>
+          <div className="brand-row">
+            <Logo size={36} />
+            <div>
+              <h1>VehicleIQ</h1>
+              <p>Fleet Intelligence</p>
+            </div>
+          </div>
         </div>
 
         {NAV.map(group => (
@@ -162,25 +171,9 @@ export default function App() {
           </div>
         )}
 
-        {page === 'reports' && (
-          <div className="placeholder-page">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
-              <polyline points="14 2 14 8 20 8" />
-            </svg>
-            <p>Reports — coming soon</p>
-          </div>
-        )}
+        {page === 'reports' && <ReportsPage />}
 
-        {page === 'about' && (
-          <div className="placeholder-page">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <circle cx="12" cy="12" r="10" /><line x1="12" y1="16" x2="12" y2="12" />
-              <line x1="12" y1="8" x2="12.01" y2="8" />
-            </svg>
-            <p>About FleetTrack v1.0</p>
-          </div>
-        )}
+        {page === 'about' && <AboutPage />}
       </main>
     </div>
   );
