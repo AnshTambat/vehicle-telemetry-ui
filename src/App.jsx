@@ -3,12 +3,21 @@ import Dashboard from './components/Dashboard';
 import AlertsPage from './components/AlertsPage';
 import ReportsPage from './components/ReportsPage';
 import AboutPage from './components/AboutPage';
+import AnalyticsPage from './components/AnalyticsPage';
+import VehiclesPage from './components/VehiclesPage';
 import Logo from './components/Logo';
 import { getVehicles, getLatestReading } from './services/api';
 import './App.css';
 
 function NavIcon({ name }) {
   const icons = {
+    car: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M5 17H3a2 2 0 01-2-2v-4a2 2 0 012-2h1l3-5h10l3 5h1a2 2 0 012 2v4a2 2 0 01-2 2h-2" />
+        <circle cx="7.5" cy="17" r="2.5" />
+        <circle cx="16.5" cy="17" r="2.5" />
+      </svg>
+    ),
     grid: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" />
@@ -114,7 +123,8 @@ export default function App() {
     {
       section: 'SYSTEM',
       items: [
-        { id: 'about', label: 'About', icon: 'info' },
+        { id: 'vehicles', label: 'Vehicles', icon: 'car' },
+        { id: 'about',    label: 'About',    icon: 'info' },
       ],
     },
   ];
@@ -162,16 +172,11 @@ export default function App() {
 
         {page === 'alerts' && <AlertsPage />}
 
-        {page === 'analytics' && (
-          <div className="placeholder-page">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
-            </svg>
-            <p>Analytics — coming soon</p>
-          </div>
-        )}
+        {page === 'analytics' && <AnalyticsPage />}
 
         {page === 'reports' && <ReportsPage />}
+
+        {page === 'vehicles' && <VehiclesPage />}
 
         {page === 'about' && <AboutPage />}
       </main>
