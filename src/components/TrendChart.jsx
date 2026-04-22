@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { getReadings } from '../services/api';
 import {
   LineChart, Line, XAxis, YAxis, Tooltip,
@@ -37,10 +37,10 @@ export default function TrendChart({ vehicleId, from, to }) {
         <YAxis 
           yAxisId="temp" 
           orientation="right"
-          label={{ value: '°C', angle: 90, position: 'insideRight', fontSize: 12 }} />
+          label={{ value: 'Â°C', angle: 90, position: 'insideRight', fontSize: 12 }} />
         <Tooltip 
           formatter={(val, name) => 
-            name === 'speed' ? [`${val} km/h`, 'Speed'] : [`${val} °C`, 'Engine Temp']} />
+            name === 'speed' ? [`${val} km/h`, 'Speed'] : [`${val} Â°C`, 'Engine Temp']} />
         <Legend />
         <Line yAxisId="speed" type="monotone" dataKey="speed"      stroke="#2563eb" dot={false} name="speed" />
         <Line yAxisId="temp"  type="monotone" dataKey="engineTemp" stroke="#dc2626" dot={false} name="engineTemp" />

@@ -10,3 +10,6 @@ export const getVehicleSummary = (id)              => api.get(`${BASE}/vehicles/
 export const getTop5Today      = ()                => api.get(`${BASE}/vehicles/top5-speed-today`);
 export const addReading        = (vehicleId, data) => api.post(`${BASE}/vehicles/${vehicleId}/readings`, data);
 export const getAvgTempPerHour = (id)              => api.get(`${BASE}/vehicles/${id}/readings/avg-engine-temp-per-hour`);
+export const createVehicle     = (data)            => api.post(`${BASE}/vehicles`, data);
+export const updateVehicle     = (id, data)        => api.put(`${BASE}/vehicles/${id}`, data);
+export const deleteVehicle     = (id)              => api.delete(`${BASE}/vehicles/${id}`);
