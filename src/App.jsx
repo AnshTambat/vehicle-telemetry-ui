@@ -3,6 +3,7 @@ import Dashboard from './components/Dashboard';
 import AlertsPage from './components/AlertsPage';
 import ReportsPage from './components/ReportsPage';
 import AboutPage from './components/AboutPage';
+import AnalyticsPage from './components/AnalyticsPage';
 import Logo from './components/Logo';
 import { getVehicles, getLatestReading } from './services/api';
 import './App.css';
@@ -162,14 +163,7 @@ export default function App() {
 
         {page === 'alerts' && <AlertsPage />}
 
-        {page === 'analytics' && (
-          <div className="placeholder-page">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
-            </svg>
-            <p>Analytics — coming soon</p>
-          </div>
-        )}
+        {page === 'analytics' && <AnalyticsPage />}
 
         {page === 'reports' && <ReportsPage />}
 
