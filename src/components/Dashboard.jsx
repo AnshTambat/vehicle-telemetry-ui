@@ -9,7 +9,13 @@ import {
 } from 'recharts';
 
 const LINE_COLORS = ['#2563eb', '#16a34a', '#dc2626', '#9333ea', '#f59e0b'];
+const GPS_COLORS  = ['#2563eb', '#16a34a', '#f59e0b', '#9333ea', '#ef4444'];
 const REFRESH_SEC = 15;
+
+// SQL Server → EF Core strips the UTC Kind → JSON has no "Z" suffix
+// → JS treats timestamp as local time (IST = UTC+5:30) → minutesAgo inflated by 330 min
+// → all vehicles falsely show offline. Appending "Z" forces UTC parsing.
+const parseTS = ts => ts ? new Date(ts.endsWith('Z') ? ts : ts + 'Z') : null;
 
 export default function Dashboard() {
   const [vehicles, setVehicles]       = useState([]);
@@ -52,7 +58,7 @@ export default function Dashboard() {
       const enriched = await Promise.all(vehs.map(async v => {
         try {
           const { data: r } = await getLatestReading(v.vehicleId);
-          const minutesAgo = (Date.now() - new Date(r.timestamp).getTime()) / 60000;
+          const minutesAgo = (Date.now() - parseTS(r.timestamp).getTime()) / 60000;
           let status = 'online';
           if (minutesAgo > 15) status = 'offline';
           else if (r.speed > 100 || r.engineTemp > 100) status = 'warning';
@@ -210,11 +216,10 @@ export default function Dashboard() {
       </div>
 
       {/* ── Stat strip ── */}
-      <div className="stat-strip">
-        <StatCard label="Active vehicles"   value={stats.active}                  sub={`of ${stats.total} total`} color="var(--accent)" />
-        <StatCard label="Total readings"    value={stats.readings.toLocaleString()} sub="all time"                color="#6366f1" />
-        <StatCard label="Peak speed today"  value={`${stats.peakSpeed} km/h`}      sub={stats.peakVehicle}        color="#f59e0b" />
-        <StatCard label="Active alerts"     value={stats.alerts}                   sub={`${stats.criticalAlerts} critical`} color="#ef4444" />
+      <div className="stat-strip stat-strip-3">
+        <StatCard label="Active vehicles"  value={stats.active}             sub={`of ${stats.total} total`}          color="#2563eb" icon="vehicles" />
+        <StatCard label="Peak speed today" value={`${stats.peakSpeed} km/h`} sub={stats.peakVehicle}                color="#f59e0b" icon="speed"    />
+        <StatCard label="Active alerts"    value={stats.alerts}             sub={`${stats.criticalAlerts} critical`} color="#ef4444" icon="alert"    />
       </div>
 
       {/* ── Feature 1: Engine Temp Gauges ── */}
@@ -267,14 +272,12 @@ export default function Dashboard() {
         </div>
       )}
 
-      {/* ── Row A: Fleet (wide) | Alerts | Top 5 ── */}
+      {/* ── Row A: Fleet | Alerts | GPS (equal 3 cols) ── */}
       <div className="dash-row-main">
 
         {/* Fleet status */}
         <div className="card">
-          <div className="card-head">
-            <h3>Fleet status</h3>
-          </div>
+          <div className="card-head"><h3>Fleet status</h3></div>
           <div className="fleet-list">
             {vehicles.map(v => (
               <div key={v.vehicleId}>
@@ -326,6 +329,70 @@ export default function Dashboard() {
           </div>
         </div>
 
+        {/* GPS positions */}
+        <div className="card gps-card">
+          <div className="card-head">
+            <h3>Last known positions</h3>
+            <span className="card-tag">Chennai fleet</span>
+          </div>
+          <div className="gps-list">
+            {vehicles.map((v, i) => (
+              <div key={v.vehicleId} className="gps-item" style={{ '--gps-clr': GPS_COLORS[i % GPS_COLORS.length] }}>
+                <div className="gps-pin-col">
+                  <span className={`gps-pulse-dot ${v.status === 'offline' ? 'gps-dot-off' : 'gps-dot-on'}`} />
+                  <div className="gps-pin-line" />
+                </div>
+                <div className="gps-content">
+                  <div className="gps-top-row">
+                    <span className="gps-name">{v.name}</span>
+                    <span className="gps-plate-chip">{v.licensePlate}</span>
+                  </div>
+                  {v.lat ? (
+                    <div className="gps-coord-row">
+                      <span className="gps-coord-badge">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="10" height="10"><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/></svg>
+                        {parseFloat(v.lat).toFixed(4)}°N
+                      </span>
+                      <span className="gps-coord-badge">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="10" height="10"><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/></svg>
+                        {parseFloat(v.lon).toFixed(4)}°E
+                      </span>
+                    </div>
+                  ) : (
+                    <span className="gps-offline">● No signal</span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ── Row B: Hourly bar (wide) | Top 5 ── */}
+      <div className="dash-row-bottom">
+        <div className="card">
+          <div className="card-head">
+            <h3>Readings per hour</h3>
+            <span className="card-tag">today</span>
+          </div>
+          {hourlyData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={180}>
+              <BarChart data={hourlyData} margin={{ top: 4, right: 8, bottom: 0, left: -20 }}>
+                <XAxis dataKey="label" tick={{ fontSize: 10 }} interval={2} />
+                <YAxis tick={{ fontSize: 10 }} />
+                <Tooltip formatter={(val) => [`${val} readings`, 'Count']}
+                  contentStyle={{ fontSize: 12, borderRadius: 6 }} />
+                <Bar dataKey="count" radius={[3, 3, 0, 0]}>
+                  {hourlyData.map((_, i) => (
+                    <Cell key={i}
+                      fill={i === currentHour ? '#2563eb' : i < currentHour ? '#93c5fd' : 'var(--bar-track)'} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          ) : <p style={{ color: 'var(--text)', fontSize: 13 }}>No data yet</p>}
+        </div>
+
         {/* Top 5 peak speed */}
         <div className="card">
           <div className="card-head">
@@ -352,47 +419,6 @@ export default function Dashboard() {
           ) : <p style={{ color: 'var(--text)', fontSize: 13 }}>No data yet</p>}
         </div>
       </div>
-
-      {/* ── Row B: Hourly bar (wide) | GPS positions ── */}
-      <div className="dash-row-bottom">
-        <div className="card">
-          <div className="card-head">
-            <h3>Readings per hour</h3>
-            <span className="card-tag">today</span>
-          </div>
-          {hourlyData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={180}>
-              <BarChart data={hourlyData} margin={{ top: 4, right: 8, bottom: 0, left: -20 }}>
-                <XAxis dataKey="label" tick={{ fontSize: 10 }} interval={2} />
-                <YAxis tick={{ fontSize: 10 }} />
-                <Tooltip formatter={(val) => [`${val} readings`, 'Count']}
-                  contentStyle={{ fontSize: 12, borderRadius: 6 }} />
-                <Bar dataKey="count" radius={[3, 3, 0, 0]}>
-                  {hourlyData.map((_, i) => (
-                    <Cell key={i}
-                      fill={i === currentHour ? '#2563eb' : i < currentHour ? '#93c5fd' : 'var(--bar-track)'} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          ) : <p style={{ color: 'var(--text)', fontSize: 13 }}>No data yet</p>}
-        </div>
-
-        {/* GPS positions */}
-        <div className="card">
-          <div className="card-head"><h3>Last known positions</h3></div>
-          <div className="gps-list">
-            {vehicles.map(v => (
-              <div key={v.vehicleId} className="gps-item">
-                <span className="gps-name">{v.name}</span>
-                {v.lat
-                  ? <span className="gps-coords">{parseFloat(v.lat).toFixed(4)}°N &nbsp;{parseFloat(v.lon).toFixed(4)}°E</span>
-                  : <span className="gps-offline">no position</span>}
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
@@ -401,12 +427,52 @@ export default function Dashboard() {
    Sub-components
 ══════════════════════════════════════ */
 
-function StatCard({ label, value, sub, color }) {
+const STAT_IMAGES = {
+  vehicles: 'https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?w=600&h=200&fit=crop&auto=format',
+  speed:    'https://images.unsplash.com/photo-1568605117036-5fe5e7bab0b7?w=600&h=200&fit=crop&auto=format',
+  alert:    'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&h=200&fit=crop&auto=format',
+};
+
+const STAT_ICONS = {
+  vehicles: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" width="32" height="32">
+      <rect x="1" y="3" width="15" height="13" rx="2"/><path d="M16 8h4l3 3v5h-7V8z"/>
+      <circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>
+    </svg>
+  ),
+  speed: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" width="32" height="32">
+      <path d="M12 2a10 10 0 100 20A10 10 0 0012 2z"/>
+      <polyline points="12 6 12 12 16 14"/>
+    </svg>
+  ),
+  alert: (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" width="32" height="32">
+      <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+      <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+    </svg>
+  ),
+};
+
+function StatCard({ label, value, sub, color, icon }) {
   return (
-    <div className="stat-card">
-      <p className="stat-label">{label}</p>
-      <p className="stat-value" style={{ color }}>{value}</p>
-      <p className="stat-sub">{sub}</p>
+    <div className="stat-card" style={{
+      '--sc-accent': color,
+      backgroundImage: `url(${STAT_IMAGES[icon]})`,
+    }}>
+      {/* dark overlay so text stays readable */}
+      <div className="stat-card-overlay" />
+      <div className="stat-card-top">
+        <div style={{ position: 'relative', zIndex: 1 }}>
+          <p className="stat-label">{label}</p>
+          <p className="stat-value" style={{ color }}>{value}</p>
+          <p className="stat-sub">{sub}</p>
+        </div>
+        <div className="stat-icon" style={{ color, position: 'relative', zIndex: 1 }}>
+          {STAT_ICONS[icon]}
+        </div>
+      </div>
+      <div className="stat-card-bar" style={{ background: color }} />
     </div>
   );
 }
@@ -506,7 +572,7 @@ function AlertIcon({ type }) {
 
 function timeSince(ts) {
   if (!ts) return '';
-  const mins = Math.round((Date.now() - new Date(ts).getTime()) / 60000);
+  const mins = Math.round((Date.now() - parseTS(ts).getTime()) / 60000);
   if (mins < 1) return 'just now';
   if (mins < 60) return `${mins} min ago`;
   return `${Math.round(mins / 60)} hr ago`;

@@ -169,17 +169,60 @@ body { margin: 0; }
 .range-btn.active { background: var(--accent); color: white; }
 
 /* ── Stat strip ── */
+/* ── Stat strip ── */
 .stat-strip {
   display: grid; grid-template-columns: repeat(4, 1fr);
   gap: 14px; margin-bottom: 20px;
 }
+.stat-strip-3 { grid-template-columns: repeat(3, 1fr); }
+
+/* Base stat card — used by AlertsPage (plain divs) */
 .stat-card {
   background: var(--stat-bg); border: 1px solid var(--border);
   border-radius: 10px; padding: 16px 18px;
 }
 .stat-label { font-size: 12px; color: var(--text); margin: 0 0 2px; }
 .stat-value { font-size: 28px; font-weight: 700; margin: 0; line-height: 1.2; }
-.stat-sub { font-size: 11px; color: var(--text); margin: 2px 0 0; }
+.stat-sub   { font-size: 11px; color: var(--text); margin: 2px 0 0; }
+
+/* Enhanced stat card — used by Dashboard StatCard component */
+.dashboard .stat-card {
+  padding: 20px 22px 0;
+  position: relative; overflow: hidden;
+  transition: transform 0.22s ease, box-shadow 0.22s ease;
+  cursor: default;
+  background-size: cover;
+  background-position: center;
+  border-radius: 12px;
+}
+.stat-card-overlay {
+  position: absolute; inset: 0;
+  background: linear-gradient(
+    135deg,
+    rgba(10,10,20,0.82) 0%,
+    rgba(10,10,20,0.70) 60%,
+    rgba(10,10,20,0.50) 100%
+  );
+  pointer-events: none; z-index: 0;
+}
+.dashboard .stat-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 28px color-mix(in srgb, var(--sc-accent) 20%, transparent);
+}
+.stat-card-top {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  padding-bottom: 16px;
+}
+.stat-icon { opacity: 0.18; transition: opacity 0.22s ease, transform 0.22s ease; }
+.dashboard .stat-card:hover .stat-icon { opacity: 0.45; transform: scale(1.12) rotate(-6deg); }
+.dashboard .stat-label { font-size: 12px; color: rgba(255,255,255,0.75); margin: 0 0 6px; letter-spacing: 0.04em; text-transform: uppercase; }
+.dashboard .stat-value { font-size: 34px; font-weight: 800; line-height: 1.1; letter-spacing: -0.5px; }
+.dashboard .stat-sub   { font-size: 11px; color: rgba(255,255,255,0.6); margin: 5px 0 0; }
+.stat-card-bar {
+  height: 3px; border-radius: 0 0 12px 12px; margin: 0 -22px;
+  animation: bar-glow 2.4s ease-in-out infinite alternate;
+}
+@keyframes bar-glow { from { opacity: 0.55; } to { opacity: 1; } }
 
 /* ── Cards ── */
 .card {
@@ -201,7 +244,7 @@ body { margin: 0; }
 /* Row A: Fleet (wider) | Alerts | Top-5  — 3 columns */
 .dash-row-main {
   display: grid;
-  grid-template-columns: 1.6fr 1fr 1fr;
+  grid-template-columns: repeat(3, 1fr);
   gap: 14px; margin-bottom: 14px;
   align-items: start;
 }
@@ -215,6 +258,25 @@ body { margin: 0; }
 /* Keep old .dash-row for any other uses */
 .dash-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
 .dash-card-map { margin-bottom: 14px; }
+
+/* ── Scrollable card bodies ── */
+.fleet-list,
+.alert-list,
+.top5-bars,
+.gps-list {
+  max-height: 220px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+.fleet-list::-webkit-scrollbar,
+.alert-list::-webkit-scrollbar,
+.top5-bars::-webkit-scrollbar,
+.gps-list::-webkit-scrollbar { width: 4px; }
+.fleet-list::-webkit-scrollbar-thumb,
+.alert-list::-webkit-scrollbar-thumb,
+.top5-bars::-webkit-scrollbar-thumb,
+.gps-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
 
 /* ── Fleet status ── */
 .fleet-list { display: flex; flex-direction: column; gap: 0; }
@@ -314,19 +376,62 @@ body { margin: 0; }
   padding: 3px 8px; border-radius: 4px;
 }
 
-/* ── GPS list (new panel) ── */
-.gps-list { display: flex; flex-direction: column; gap: 0; }
+/* ── GPS list redesign ── */
+.gps-card { background: var(--card-bg); }
+.gps-list { display: flex; flex-direction: column; gap: 0; padding-top: 4px; }
+
 .gps-item {
-  display: flex; flex-direction: column; gap: 2px;
+  display: flex; align-items: flex-start; gap: 10px;
   padding: 10px 0; border-bottom: 1px solid var(--border);
 }
 .gps-item:last-child { border-bottom: none; }
-.gps-name  { font-size: 13px; font-weight: 600; color: var(--text-h); }
-.gps-coords {
-  font-size: 12px; color: var(--text);
-  font-family: var(--mono); letter-spacing: 0.3px;
+
+/* Left pin column */
+.gps-pin-col {
+  display: flex; flex-direction: column; align-items: center;
+  padding-top: 4px; gap: 0;
 }
-.gps-offline { font-size: 12px; color: var(--text); opacity: 0.5; }
+.gps-pulse-dot {
+  width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+  position: relative;
+}
+.gps-dot-on {
+  background: var(--gps-clr, #2563eb);
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--gps-clr, #2563eb) 40%, transparent);
+  animation: gps-ping 1.8s ease-out infinite;
+}
+.gps-dot-off { background: #6b7280; }
+@keyframes gps-ping {
+  0%   { box-shadow: 0 0 0 0 color-mix(in srgb, var(--gps-clr,#2563eb) 50%, transparent); }
+  70%  { box-shadow: 0 0 0 8px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+.gps-pin-line {
+  width: 1.5px; flex: 1; min-height: 20px;
+  background: linear-gradient(to bottom, var(--gps-clr, #2563eb), transparent);
+  opacity: 0.25; margin-top: 3px;
+}
+
+/* Right content */
+.gps-content { flex: 1; display: flex; flex-direction: column; gap: 5px; }
+.gps-top-row { display: flex; align-items: center; gap: 8px; }
+.gps-name    { font-size: 13px; font-weight: 600; color: var(--text-h); }
+.gps-plate-chip {
+  font-size: 10px; padding: 1px 6px; border-radius: 4px;
+  background: var(--accent-bg); color: var(--text);
+  font-family: var(--mono); letter-spacing: 0.5px;
+}
+.gps-coord-row { display: flex; gap: 6px; flex-wrap: wrap; }
+.gps-coord-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 11px; font-family: var(--mono);
+  padding: 3px 8px; border-radius: 5px;
+  background: color-mix(in srgb, var(--gps-clr,#2563eb) 12%, transparent);
+  color: var(--gps-clr, #2563eb);
+  border: 1px solid color-mix(in srgb, var(--gps-clr,#2563eb) 25%, transparent);
+  letter-spacing: 0.3px;
+}
+.gps-offline { font-size: 11px; color: #9ca3af; }
 
 /* ── Placeholder page ── */
 .placeholder-page {
@@ -890,6 +995,7 @@ body { margin: 0; }
 /* ── Responsive ── */
 @media (max-width: 900px) {
   .stat-strip { grid-template-columns: repeat(2, 1fr); }
+  .stat-strip-3 { grid-template-columns: repeat(3, 1fr); }
   .dash-row { grid-template-columns: 1fr; }
   .dash-row-main { grid-template-columns: 1fr; }
   .dash-row-bottom { grid-template-columns: 1fr; }

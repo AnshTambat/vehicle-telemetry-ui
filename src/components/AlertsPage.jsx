@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { getVehicles, getLatestReading, getVehicleSummary } from '../services/api';
 
+const parseTS = ts => ts ? new Date(ts.endsWith('Z') ? ts : ts + 'Z') : null;
+
 export default function AlertsPage() {
   const [alerts, setAlerts]         = useState([]);
   const [loading, setLoading]       = useState(true);
@@ -21,7 +23,7 @@ export default function AlertsPage() {
         try { reading = (await getLatestReading(v.vehicleId)).data; } catch { /* skip */ }
         try { summary = (await getVehicleSummary(v.vehicleId)).data; } catch { /* skip */ }
 
-        const minutesAgo = reading ? Math.round((Date.now() - new Date(reading.timestamp).getTime()) / 60000) : null;
+        const minutesAgo = reading ? Math.round((Date.now() - parseTS(reading.timestamp).getTime()) / 60000) : null;
 
         // Engine overheating
         if (reading && reading.engineTemp > 95) {
