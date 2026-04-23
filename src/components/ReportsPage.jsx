@@ -107,9 +107,9 @@ export default function ReportsPage() {
         csvContent += `${vehicle.vehicleId},${vehicle.name},${vehicle.licensePlate},${vehicle.totalReadings || 'N/A'},${vehicle.peakSpeed || 'N/A'},${vehicle.currentSpeed || 'N/A'},${vehicle.currentTemp || 'N/A'},${vehicle.status || 'Unknown'}\n`;
       });
     } else if (report.id === 'top-speed') {
-      csvContent = 'Rank,Vehicle ID,Name,Peak Speed (km/h),Recorded At\n';
+      csvContent = 'Rank,Vehicle ID,Name,Peak Speed (km/h)\n';
       report.data.forEach((vehicle, index) => {
-        csvContent += `${index + 1},${vehicle.vehicleId},${vehicle.name || 'Unknown'},${vehicle.peakSpeed || 'N/A'},${vehicle.recordedAt || 'N/A'}\n`;
+        csvContent += `${index + 1},${vehicle.vehicleId},${vehicle.name || 'Unknown'},${vehicle.peakSpeed || 'N/A'}\n`;
       });
     }
 
