@@ -90,8 +90,6 @@ export default function App() {
   const [theme, setTheme]           = useState(() => localStorage.getItem('theme') || 'light');
   const [alertCount, setAlertCount] = useState(0);
 
-  if (!user) return <AuthPage />;
-
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('theme', theme);
@@ -99,6 +97,7 @@ export default function App() {
 
   // Compute active alert count from live data
   useEffect(() => {
+    if (!user) return;
     async function fetchAlertCount() {
       try {
         const { data: vehicles } = await getVehicles();
@@ -116,7 +115,9 @@ export default function App() {
       } catch { /* skip */ }
     }
     fetchAlertCount();
-  }, []);
+  }, [user]);
+
+  if (!user) return <AuthPage />;
 
   const toggleTheme = () => setTheme(t => t === 'light' ? 'dark' : 'light');
 
