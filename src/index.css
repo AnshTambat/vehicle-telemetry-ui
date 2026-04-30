@@ -1419,3 +1419,61 @@ body { margin: 0; }
 @media (max-width: 600px) {
   .vehicles-grid { grid-template-columns: 1fr; }
 }
+
+
+/* ── Role badges ── */
+.role-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 2px;
+  width: fit-content;
+}
+
+.role-admin {
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+}
+
+.role-operator {
+  background: rgba(245, 158, 11, 0.12);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.25);
+}
+
+.role-viewer {
+  background: rgba(37, 99, 235, 0.12);
+  color: #2563eb;
+  border: 1px solid rgba(37, 99, 235, 0.25);
+}
+
+[data-theme="dark"] .role-admin {
+  background: rgba(239, 68, 68, 0.18);
+  color: #f87171;
+  border-color: rgba(239, 68, 68, 0.35);
+}
+
+[data-theme="dark"] .role-operator {
+  background: rgba(245, 158, 11, 0.18);
+  color: #fbbf24;
+  border-color: rgba(245, 158, 11, 0.35);
+}
+
+[data-theme="dark"] .role-viewer {
+  background: rgba(37, 99, 235, 0.18);
+  color: #60a5fa;
+  border-color: rgba(37, 99, 235, 0.35);
+}
+
+.auth-role-hint {
+  font-size: 11px;
+  color: var(--text);
+  margin: 4px 0 0;
+  opacity: 0.75;
+}
+

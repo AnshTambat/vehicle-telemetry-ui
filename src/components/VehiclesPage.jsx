@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useAuth } from '../contexts/AuthContext';
 import { getVehicles, createVehicle, updateVehicle, deleteVehicle } from '../services/api';
 
 function CarIconLarge() {
@@ -64,12 +65,16 @@ function VehicleCard({ vehicle, onEdit, onDelete }) {
         </div>
       </div>
       <div className="vc-actions">
-        <button className="vc-btn vc-btn-edit" onClick={onEdit} title="Edit">
-          <EditIcon />
-        </button>
-        <button className="vc-btn vc-btn-delete" onClick={onDelete} title="Delete">
-          <TrashIcon />
-        </button>
+        {onEdit && (
+          <button className="vc-btn vc-btn-edit" onClick={onEdit} title="Edit">
+            <EditIcon />
+          </button>
+        )}
+        {onDelete && (
+          <button className="vc-btn vc-btn-delete" onClick={onDelete} title="Delete">
+            <TrashIcon />
+          </button>
+        )}
       </div>
     </div>
   );
@@ -146,6 +151,7 @@ function DeleteModal({ vehicle, saving, onConfirm, onClose }) {
 }
 
 export default function VehiclesPage() {
+  const { isAdmin, canEdit } = useAuth();
   const [vehicles, setVehicles]     = useState([]);
   const [loading, setLoading]       = useState(true);
   const [fetchError, setFetchError] = useState(null);
@@ -241,9 +247,11 @@ export default function VehiclesPage() {
                 : `${vehicles.length} vehicle${vehicles.length !== 1 ? 's' : ''} registered`}
             </p>
           </div>
-          <button className="btn-add-vehicle" onClick={openAdd}>
-            <span className="btn-add-plus">+</span> Add Vehicle
-          </button>
+          {canEdit() && (
+            <button className="btn-add-vehicle" onClick={openAdd}>
+              <span className="btn-add-plus">+</span> Add Vehicle
+            </button>
+          )}
         </div>
       </div>
 
@@ -276,8 +284,8 @@ export default function VehiclesPage() {
             <VehicleCard
               key={v.vehicleId}
               vehicle={v}
-              onEdit={() => openEdit(v)}
-              onDelete={() => setDeleteModal(v)}
+              onEdit={canEdit() ? () => openEdit(v) : null}
+              onDelete={isAdmin() ? () => setDeleteModal(v) : null}
             />
           ))}
         </div>

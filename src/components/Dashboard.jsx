@@ -209,7 +209,7 @@ export default function Dashboard() {
           </div>
           <p className="dash-date">
             {dateStr} &middot; Chennai fleet
-            &middot; refreshes in <strong>{countdown}s</strong>
+            &middot; Refreshes in <strong>{countdown}s</strong>
             {lastUpdated && <> &middot; updated {updatedStr}</>}
           </p>
         </div>
@@ -226,7 +226,7 @@ export default function Dashboard() {
       <div className="card dash-gauges-card">
         <div className="card-head">
           <h3>Engine Temperature</h3>
-          <span className="card-tag">Live · auto-updates</span>
+          <span className="card-tag">Live · Auto-updates</span>
         </div>
         <div className="gauges-row">
           {vehicles.map(v => (
@@ -373,7 +373,7 @@ export default function Dashboard() {
         <div className="card">
           <div className="card-head">
             <h3>Readings per hour</h3>
-            <span className="card-tag">today</span>
+            <span className="card-tag">Today</span>
           </div>
           {hourlyData.length > 0 ? (
             <ResponsiveContainer width="100%" height={180}>
@@ -397,7 +397,7 @@ export default function Dashboard() {
         <div className="card">
           <div className="card-head">
             <h3>Top 5 peak speed</h3>
-            <span className="card-tag">today</span>
+            <span className="card-tag">Today</span>
           </div>
           {top5.length > 0 ? (
             <div className="top5-bars">

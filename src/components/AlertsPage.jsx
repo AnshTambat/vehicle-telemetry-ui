@@ -150,9 +150,9 @@ export default function AlertsPage() {
           <h2>Alerts</h2>
           <p className="alerts-subtitle">All triggered alerts across the fleet</p>
         </div>
-        <button className="alerts-config-btn">
+        {/* <button className="alerts-config-btn">
           Configure rules <span>&#x2197;</span>
-        </button>
+        </button> */}
       </div>
 
       {/* Stat strip */}
@@ -222,7 +222,7 @@ export default function AlertsPage() {
         <table className="alerts-table">
           <thead>
             <tr>
-              <th className="col-check"><input type="checkbox" /></th>
+              {/* <th className="col-check"><input type="checkbox" /></th> */}
               <th>Severity</th>
               <th>Vehicle</th>
               <th>Alert</th>
@@ -238,7 +238,7 @@ export default function AlertsPage() {
             )}
             {filtered.map(a => (
               <tr key={a.id} className={`alerts-row severity-${a.severity}`}>
-                <td className="col-check"><input type="checkbox" /></td>
+                {/* <td className="col-check"><input type="checkbox" /></td> */}
                 <td>
                   <span className={`severity-badge sev-${a.severity}`}>{a.severity}</span>
                 </td>
@@ -267,7 +267,7 @@ export default function AlertsPage() {
                   {a.status === 'acknowledged' && (
                     <>
                       <button className="alert-action-btn">Acknowledge</button>
-                      <button className="alert-action-btn">Details</button>
+                      {/* <button className="alert-action-btn">Details</button> */}
                     </>
                   )}
                   {a.status === 'resolved' && (

@@ -43,8 +43,9 @@ export default function AboutPage() {
 
   const highlights = [
     { value: '15s',  label: 'Auto-refresh interval',   color: '#2563eb' },
+    { value: '100%',    label: 'Access Controlled',    color: '#16a34a' },
     { value: '24 h', label: 'Rolling data window',      color: '#7c3aed' },
-    { value: '3',    label: 'Vehicles tracked live',    color: '#16a34a' },
+    
     { value: '100%', label: 'Simulated real-time data', color: '#f59e0b' },
   ];
 

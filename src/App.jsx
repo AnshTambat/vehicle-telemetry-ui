@@ -85,7 +85,7 @@ function LogoutIcon() {
 }
 
 export default function App() {
-  const { user, logout } = useAuth();
+  const { user, logout, isAdmin, canEdit } = useAuth();
   const [page, setPage]             = useState('dashboard');
   const [theme, setTheme]           = useState(() => localStorage.getItem('theme') || 'light');
   const [alertCount, setAlertCount] = useState(0);
@@ -139,8 +139,8 @@ export default function App() {
     {
       section: 'SYSTEM',
       items: [
-        { id: 'vehicles', label: 'Vehicles', icon: 'car' },
-        { id: 'about',    label: 'About',    icon: 'info' },
+        ...(canEdit() ? [{ id: 'vehicles', label: 'Vehicles', icon: 'car' }] : []),
+        { id: 'about', label: 'About', icon: 'info' },
       ],
     },
   ];
@@ -180,6 +180,9 @@ export default function App() {
             <div className="sidebar-user-text">
               <span className="sidebar-user-name">{user.username}</span>
               <span className="sidebar-user-email">{user.email}</span>
+              <span className={`role-badge role-${user.role?.toLowerCase()}`}>
+                {user.role ?? 'Viewer'}
+              </span>
             </div>
           </div>
           <button className="sidebar-logout-btn" onClick={logout} title="Sign out">
