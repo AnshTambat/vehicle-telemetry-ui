@@ -36,10 +36,9 @@ const register = async (username, email, password, role = 'Viewer', roleCode = '
   };
 
   // Helper functions to check roles easily anywhere in the app
-  const isAdmin    = () => user?.role === 'Admin';
-  const isOperator = () => user?.role === 'Operator';
-  const isViewer   = () => user?.role === 'Viewer';
-  const canEdit    = () => user?.role === 'Admin' || user?.role === 'Operator';
+  const isAdmin  = () => user?.role === 'Admin';
+  const isViewer = () => user?.role === 'Viewer';
+  const canEdit  = () => user?.role === 'Admin';
 
   return (
     <AuthContext.Provider value={{
@@ -48,7 +47,6 @@ const register = async (username, email, password, role = 'Viewer', roleCode = '
       register,
       logout,
       isAdmin,
-      isOperator,
       isViewer,
       canEdit
     }}>

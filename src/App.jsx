@@ -202,7 +202,7 @@ export default function App() {
       <main className="main-content">
         {page === 'dashboard' && <Dashboard />}
 
-        {page === 'alerts' && <AlertsPage />}
+        {page === 'alerts' && <AlertsPage onCountChange={setAlertCount} />}
 
         {page === 'analytics' && <AnalyticsPage />}
 

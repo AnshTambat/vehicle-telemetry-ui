@@ -3,7 +3,7 @@ import { getVehicles, getLatestReading, getVehicleSummary } from '../services/ap
 
 const parseTS = ts => ts ? new Date(ts.endsWith('Z') ? ts : ts + 'Z') : null;
 
-export default function AlertsPage() {
+export default function AlertsPage({ onCountChange }) {
   const [alerts, setAlerts]         = useState([]);
   const [loading, setLoading]       = useState(true);
   const [statusFilter, setStatusFilter] = useState('all');
@@ -11,6 +11,10 @@ export default function AlertsPage() {
   const [sort, setSort]             = useState('newest');
 
   useEffect(() => { loadAlerts(); }, []);
+
+  useEffect(() => {
+    if (onCountChange) onCountChange(alerts.filter(a => a.status === 'active').length);
+  }, [alerts, onCountChange]);
 
   async function loadAlerts() {
     try {
@@ -257,22 +261,18 @@ export default function AlertsPage() {
                     {a.status.charAt(0).toUpperCase() + a.status.slice(1)}
                   </span>
                 </td>
-                <td className="alert-actions-cell">
-                  {a.status === 'active' && (
-                    <>
+                <td>
+                  <div className="alert-actions-cell">
+                    {a.status === 'active' && (
                       <button className="alert-action-btn primary" onClick={() => handleAcknowledge(a.id)}>Acknowledge</button>
-                      <button className="alert-action-btn">Details</button>
-                    </>
-                  )}
-                  {a.status === 'acknowledged' && (
-                    <>
-                      <button className="alert-action-btn">Acknowledge</button>
-                      {/* <button className="alert-action-btn">Details</button> */}
-                    </>
-                  )}
-                  {a.status === 'resolved' && (
-                    <button className="alert-action-btn" onClick={() => handleReopen(a.id)}>Re-open</button>
-                  )}
+                    )}
+                    {a.status === 'acknowledged' && (
+                      <button className="alert-action-btn" disabled>Acknowledged</button>
+                    )}
+                    {a.status === 'resolved' && (
+                      <button className="alert-action-btn" onClick={() => handleReopen(a.id)}>Re-open</button>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}

@@ -27,13 +27,18 @@ export default function AuthPage() {
     setError('');
     setInfo('');
 
+    const emailRegex = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/;
+    const passwordRegex = /^(?=.*[A-Z])(?=.*\d)(?=.*[^a-zA-Z\d]).{8,}$/;
+
     if (mode === 'register') {
-      if (!form.username.trim())        return setError('Username is required.');
-      if (!form.email.trim())           return setError('Email is required.');
-      if (form.password.length < 6)     return setError('Password must be at least 6 characters.');
-      if (form.password !== form.confirm) return setError('Passwords do not match.');
-      if ((form.role === 'Operator' || form.role === 'Admin') && !form.roleCode.trim())
-        return setError(`Please enter the ${form.role} access code.`);
+      if (!form.username.trim())             return setError('Username is required.');
+      if (!form.email.trim())                return setError('Email is required.');
+      if (!emailRegex.test(form.email.trim())) return setError('Enter a valid email address (e.g. user@example.com).');
+      if (!passwordRegex.test(form.password))
+        return setError('Password must be at least 8 characters and contain at least one uppercase letter, one number, and one special character.');
+      if (form.password !== form.confirm)    return setError('Passwords do not match.');
+      if (form.role === 'Admin' && !form.roleCode.trim())
+        return setError('Please enter the Admin access code.');
 
       setLoading(true);
       try {
@@ -46,8 +51,9 @@ export default function AuthPage() {
         setLoading(false);
       }
     } else {
-      if (!form.email.trim()) return setError('Email is required.');
-      if (!form.password)     return setError('Password is required.');
+      if (!form.email.trim())                  return setError('Email is required.');
+      if (!emailRegex.test(form.email.trim())) return setError('Enter a valid email address (e.g. user@example.com).');
+      if (!form.password)                      return setError('Password is required.');
 
       setLoading(true);
       try {
@@ -144,11 +150,16 @@ export default function AuthPage() {
                 <input
                   className="form-input"
                   type="password"
-                  placeholder={mode === 'register' ? 'Min. 6 characters' : '••••••••'}
+                  placeholder={mode === 'register' ? 'Min. 8 characters' : '••••••••'}
                   value={form.password}
                   onChange={set('password')}
                   autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
                 />
+                {mode === 'register' && (
+                  <p className="auth-role-hint">
+                    Must be at least 8 characters with one uppercase letter, one number, and one special character.
+                  </p>
+                )}
               </div>
 
               {mode === 'register' && (
@@ -173,30 +184,24 @@ export default function AuthPage() {
                       value={form.role}
                       onChange={set('role')}
                     >
-                      <option value="Viewer">Viewer </option>
-                      <option value="Operator">Operator </option>
-                      <option value="Admin">Admin </option>
+                      <option value="Viewer">Viewer</option>
+                      <option value="Admin">Admin</option>
                     </select>
                   </div>
 
-                  {/* Secret code field — only shows for Operator or Admin */}
-                  {(form.role === 'Operator' || form.role === 'Admin') && (
+                  {form.role === 'Admin' && (
                     <div className="form-group">
-                      <label className="form-label">
-                        {form.role === 'Admin' ? 'Admin Access Code' : 'Operator Access Code'}
-                      </label>
+                      <label className="form-label">Admin Access Code</label>
                       <input
                         className="form-input"
                         type="password"
-                        placeholder={`Enter ${form.role.toLowerCase()} access code`}
+                        placeholder="Enter admin access code"
                         value={form.roleCode}
                         onChange={set('roleCode')}
                         autoComplete="off"
                       />
                       <p className="auth-role-hint">
-                        {form.role === 'Admin'
-                          ? 'Contact your system administrator for the Admin access code.'
-                          : 'Contact your system administrator for the Operator access code.'}
+                        Contact your system administrator for the Admin access code.
                       </p>
                     </div>
                   )}

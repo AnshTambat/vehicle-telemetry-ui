@@ -502,7 +502,7 @@ body { margin: 0; }
   border-bottom: 1px solid var(--border);
 }
 .alerts-table td {
-  padding: 12px 12px; vertical-align: top;
+  padding: 12px 12px; vertical-align: middle;
   border-bottom: 1px solid var(--border);
 }
 .alerts-table tbody tr:last-child td { border-bottom: none; }
@@ -542,7 +542,8 @@ body { margin: 0; }
 [data-theme="dark"] .st-resolved     { background: rgba(107,114,128,0.15); color: #9ca3af; }
 
 .alert-actions-cell {
-  display: flex; gap: 6px; flex-wrap: wrap;
+  display: flex; align-items: center; gap: 6px;
+  min-width: 140px;
 }
 .alert-action-btn {
   padding: 4px 12px; border: 1px solid var(--border); border-radius: 6px;
@@ -550,7 +551,8 @@ body { margin: 0; }
   cursor: pointer; font-family: inherit; white-space: nowrap;
   transition: all 0.15s;
 }
-.alert-action-btn:hover { border-color: var(--accent); color: var(--accent); }
+.alert-action-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.alert-action-btn:disabled { opacity: 0.45; cursor: default; }
 .alert-action-btn.primary {
   background: var(--text-h); color: var(--card-bg); border-color: var(--text-h);
 }
@@ -1440,11 +1442,6 @@ body { margin: 0; }
   border: 1px solid rgba(239, 68, 68, 0.25);
 }
 
-.role-operator {
-  background: rgba(245, 158, 11, 0.12);
-  color: #f59e0b;
-  border: 1px solid rgba(245, 158, 11, 0.25);
-}
 
 .role-viewer {
   background: rgba(37, 99, 235, 0.12);
@@ -1458,11 +1455,6 @@ body { margin: 0; }
   border-color: rgba(239, 68, 68, 0.35);
 }
 
-[data-theme="dark"] .role-operator {
-  background: rgba(245, 158, 11, 0.18);
-  color: #fbbf24;
-  border-color: rgba(245, 158, 11, 0.35);
-}
 
 [data-theme="dark"] .role-viewer {
   background: rgba(37, 99, 235, 0.18);
