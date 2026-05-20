@@ -12,9 +12,6 @@ const LINE_COLORS = ['#2563eb', '#16a34a', '#dc2626', '#9333ea', '#f59e0b'];
 const GPS_COLORS  = ['#2563eb', '#16a34a', '#f59e0b', '#9333ea', '#ef4444'];
 const REFRESH_SEC = 15;
 
-// SQL Server → EF Core strips the UTC Kind → JSON has no "Z" suffix
-// → JS treats timestamp as local time (IST = UTC+5:30) → minutesAgo inflated by 330 min
-// → all vehicles falsely show offline. Appending "Z" forces UTC parsing.
 const parseTS = ts => ts ? new Date(ts.endsWith('Z') ? ts : ts + 'Z') : null;
 
 export default function Dashboard() {
@@ -83,7 +80,7 @@ export default function Dashboard() {
             peakSpeed = summary.peakSpeed;
             peakVehicle = v.name;
           }
-        } catch { /* skip */ }
+        } catch {  }
 
         if (v.engineTemp !== null && v.engineTemp > 100) {
           generatedAlerts.push({ id: `temp-${v.vehicleId}`, type: 'critical', icon: 'temp',
@@ -156,7 +153,7 @@ export default function Dashboard() {
 
     setHourlyData(hours);
 
-    // Build speed trend chart
+    //Build speed trend chart
     const longest = vehicleReadings.reduce((a, b) => a.readings.length > b.readings.length ? a : b, { readings: [] });
     if (longest.readings.length > 0) {
       const points = longest.readings.map((ref, i) => {
@@ -423,9 +420,8 @@ export default function Dashboard() {
   );
 }
 
-/* ══════════════════════════════════════
-   Sub-components
-══════════════════════════════════════ */
+
+//Sub-components
 
 const STAT_IMAGES = {
   vehicles: 'https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?w=600&h=200&fit=crop&auto=format',
@@ -477,7 +473,7 @@ function StatCard({ label, value, sub, color, icon }) {
   );
 }
 
-/* Feature 4 — Pulsing status badge */
+/* Feature 4 - Pulsing status badge */
 function PulseBadge({ status }) {
   const cfg = {
     online:  { label: 'Online',  dot: 'pdot-online',  cls: 'badge-online' },
@@ -493,12 +489,12 @@ function PulseBadge({ status }) {
   );
 }
 
-/* Feature 3 — SVG radial temperature gauge */
+/* Feature 3 - SVG radial temperature gauge */
 function TempGauge({ name, temp, status }) {
   const MIN = 60, MAX = 120;
   const r = 42, cx = 60, cy = 60;
   const circ = 2 * Math.PI * r;
-  const arc  = circ * 0.75;                                       // 270° sweep
+  const arc  = circ * 0.75;                                      
   const t = temp ?? 0;
   const progress = Math.max(0, Math.min(1, (t - MIN) / (MAX - MIN)));
   const fill  = arc * progress;

@@ -14,10 +14,9 @@ export default function ReportsPage() {
     try {
       setLoading(true);
 
-      // Get all vehicles
       const { data: vehicles } = await getVehicles();
 
-      // Generate vehicle summary report
+      //Generate vehicle summary report
       const vehicleSummaries = await Promise.all(
         vehicles.map(async (vehicle) => {
           try {
@@ -51,7 +50,6 @@ export default function ReportsPage() {
         })
       );
 
-      // Get top 5 speed report
       let top5Data = [];
       try {
         const { data: top5 } = await getTop5Today();
@@ -60,7 +58,6 @@ export default function ReportsPage() {
         }
       } catch (error) {
         console.error('Error fetching top 5 data:', error);
-        // Fallback: sort vehicles by their peak speed from summary
         top5Data = vehicleSummaries
           .filter(v => v.peakSpeed !== 'N/A' && v.peakSpeed > 0)
           .sort((a, b) => b.peakSpeed - a.peakSpeed)
@@ -227,7 +224,6 @@ export default function ReportsPage() {
                         <th>Rank</th>
                         <th>Vehicle</th>
                         <th>Peak Speed</th>
-                        <th>Recorded At</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -236,7 +232,6 @@ export default function ReportsPage() {
                           <td>{index + 1}</td>
                           <td>{vehicle.name}</td>
                           <td>{vehicle.peakSpeed || 'N/A'} km/h</td>
-                          <td>{vehicle.recordedAt || 'N/A'}</td>
                         </tr>
                       ))}
                     </tbody>

@@ -1,22 +1,14 @@
-/**
- * VehicleIQ Brand Mark
- * Speedometer-style gauge with live-indicator needle tip.
- * Inspired by automotive service iconography — speedometer + intelligence pulse.
- */
 export default function Logo({ size = 40 }) {
   const cx = 22, cy = 22, r = 13.5;
-  const circ = 2 * Math.PI * r;          // 84.82
-  const arcLen = circ * 0.75;            // 270° sweep = 63.62
-  const fillLen = arcLen * 0.72;         // needle at 72% = "high speed"
+  const circ = 2 * Math.PI * r;          
+  const arcLen = circ * 0.75;            
+  const fillLen = arcLen * 0.72;        
 
-  // Needle tip angle: arc starts at 135° (SVG CW from right), 72% of 270° = 194.4°
-  // Tip angle from right (CW): 135 + 194.4 = 329.4°
   const tipDeg  = 135 + 0.72 * 270;
   const tipRad  = (tipDeg * Math.PI) / 180;
   const needleR = 10.5;
   const tipX    = (cx + needleR * Math.cos(tipRad)).toFixed(2);
   const tipY    = (cy + needleR * Math.sin(tipRad)).toFixed(2);
-  // tipX ≈ 31.44, tipY ≈ 16.63  →  points upper-right ✓
 
   return (
     <svg
@@ -54,10 +46,7 @@ export default function Logo({ size = 40 }) {
         transform={`rotate(135 ${cx} ${cy})`}
       />
 
-      {/* ── Tick marks at 0%, 50%, 100% on track ── */}
-      {/* 0%  → 135° from right → (cx+r·cos135, cy+r·sin135) */}
-      {/* 50% → 135+135=270° → (cx+r·cos270, cy+r·sin270)   */}
-      {/* 100%→ 135+270=405=45° → (cx+r·cos45, cy+r·sin45)  */}
+        {/* ── Tick marks at 0%, 50%, 100% ── */}
       {[0, 0.5, 1].map(pct => {
         const a = ((135 + pct * 270) * Math.PI) / 180;
         const ox = (cx + r * Math.cos(a)).toFixed(2);

@@ -81,10 +81,10 @@ const tip = {
 };
 
 /* Custom tooltip for scatter chart */
-/* ── GPS Map component ── */
+/* GPS Map component */
 function GpsMap({ locations }) {
   const [hovered, setHovered] = useState(null);
-  const W = 520, H = 260, PAD = 36;
+  const W = 520, H = 300, PAD = 36;
 
   const points = locations.map(s => ({ ...s, lat: s.data[0].lat, lon: s.data[0].lon }));
 
@@ -98,16 +98,42 @@ function GpsMap({ locations }) {
   let minLat = Math.min(...lats), maxLat = Math.max(...lats);
   let minLon = Math.min(...lons), maxLon = Math.max(...lons);
 
-  // add padding so single-point doesn't collapse
-  const latSpan = Math.max(maxLat - minLat, 0.01);
-  const lonSpan = Math.max(maxLon - minLon, 0.01);
-  minLat -= latSpan * 0.25; maxLat += latSpan * 0.25;
-  minLon -= lonSpan * 0.25; maxLon += lonSpan * 0.25;
+  const latSpan = Math.max(maxLat - minLat, 0.012);
+  const lonSpan = Math.max(maxLon - minLon, 0.012);
+  minLat -= latSpan * 0.4; maxLat += latSpan * 0.4;
+  minLon -= lonSpan * 0.4; maxLon += lonSpan * 0.4;
 
   const toX = (lon) => PAD + ((lon - minLon) / (maxLon - minLon)) * (W - PAD * 2);
   const toY = (lat) => (H - PAD) - ((lat - minLat) / (maxLat - minLat)) * (H - PAD * 2);
 
-  // grid lines
+  // ── Spread overlapping pins so every vehicle is visible ──
+  const OVERLAP_THRESHOLD = 22; // px — pins closer than this get spread
+  const SPREAD_RADIUS     = 38; // px — radius of the spread circle
+  const rawPts = points.map(p => ({ ...p, cx: toX(p.lon), cy: toY(p.lat) }));
+  const assigned = new Array(rawPts.length).fill(false);
+  const finalPts = rawPts.map(p => ({ ...p, fx: p.cx, fy: p.cy }));
+
+  for (let i = 0; i < rawPts.length; i++) {
+    if (assigned[i]) continue;
+    const group = [i];
+    for (let j = i + 1; j < rawPts.length; j++) {
+      if (assigned[j]) continue;
+      const dx = rawPts[j].cx - rawPts[i].cx;
+      const dy = rawPts[j].cy - rawPts[i].cy;
+      if (Math.sqrt(dx * dx + dy * dy) < OVERLAP_THRESHOLD) group.push(j);
+    }
+    if (group.length > 1) {
+      const cx = group.reduce((s, k) => s + rawPts[k].cx, 0) / group.length;
+      const cy = group.reduce((s, k) => s + rawPts[k].cy, 0) / group.length;
+      group.forEach((k, idx) => {
+        const angle = (2 * Math.PI * idx) / group.length - Math.PI / 2;
+        finalPts[k].fx = cx + Math.cos(angle) * SPREAD_RADIUS;
+        finalPts[k].fy = cy + Math.sin(angle) * SPREAD_RADIUS;
+        assigned[k] = true;
+      });
+    }
+  }
+
   const GRID = 4;
   const gridLats = Array.from({ length: GRID + 1 }, (_, i) => minLat + (i / GRID) * (maxLat - minLat));
   const gridLons = Array.from({ length: GRID + 1 }, (_, i) => minLon + (i / GRID) * (maxLon - minLon));
@@ -127,7 +153,6 @@ function GpsMap({ locations }) {
           })
         )}
 
-        {/* ── grid lines ── */}
         {gridLats.map((lat, i) => (
           <line key={`lat-${i}`} x1={PAD} x2={W - PAD} y1={toY(lat)} y2={toY(lat)}
             stroke="#1e3a5f" strokeWidth="0.7" strokeDasharray="3 4" />
@@ -137,7 +162,6 @@ function GpsMap({ locations }) {
             stroke="#1e3a5f" strokeWidth="0.7" strokeDasharray="3 4" />
         ))}
 
-        {/* ── axis labels ── */}
         {gridLats.filter((_, i) => i % 2 === 0).map((lat, i) => (
           <text key={`lbl-lat-${i}`} x={PAD - 4} y={toY(lat) + 3} textAnchor="end"
             fontSize="8" fill="#4a7fa5" fontFamily="ui-monospace,monospace">
@@ -151,15 +175,14 @@ function GpsMap({ locations }) {
           </text>
         ))}
 
-        {/* ── vehicle pins ── */}
-        {points.map((p) => {
-          const cx = toX(p.lon), cy = toY(p.lat);
+        {/* ── vehicle pins (spread to avoid overlap) ── */}
+        {finalPts.map((p) => {
+          const cx = p.fx, cy = p.fy;
           const isHov = hovered === p.vehicleId;
           return (
             <g key={p.vehicleId} style={{ cursor: 'pointer' }}
               onMouseEnter={() => setHovered(p.vehicleId)}
               onMouseLeave={() => setHovered(null)}>
-              {/* pulse rings */}
               <circle cx={cx} cy={cy} r="14" fill="none" stroke={p.color} strokeWidth="1" opacity="0.25">
                 <animate attributeName="r" values="8;20;8" dur="2.4s" repeatCount="indefinite" />
                 <animate attributeName="opacity" values="0.5;0;0.5" dur="2.4s" repeatCount="indefinite" />
@@ -169,11 +192,9 @@ function GpsMap({ locations }) {
                 <animate attributeName="opacity" values="0.4;0;0.4" dur="2.4s" begin="0.6s" repeatCount="indefinite" />
               </circle>
 
-              {/* pin body — drop-shadow */}
               <filter id={`shadow-${p.vehicleId}`} x="-50%" y="-50%" width="200%" height="200%">
                 <feDropShadow dx="0" dy="1" stdDeviation="1.5" floodColor={p.color} floodOpacity="0.6" />
               </filter>
-              {/* pin shape */}
               <path
                 d={`M${cx},${cy - 2}
                     C${cx - 8},${cy - 14} ${cx - 8},${cy - 22} ${cx},${cy - 22}
@@ -183,7 +204,6 @@ function GpsMap({ locations }) {
                 stroke="white" strokeWidth={isHov ? 1.2 : 0.6}
                 opacity={isHov ? 1 : 0.92}
               />
-              {/* pin hole */}
               <circle cx={cx} cy={cy - 15} r="3" fill="rgba(0,0,0,0.35)" />
 
               {/* label */}

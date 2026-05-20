@@ -109,10 +109,10 @@ export default function App() {
             if (r.engineTemp > 100) count++;
             if (r.speed > 100) count++;
             if (minutesAgo > 15) count++;
-          } catch { /* skip */ }
+          } catch {  }
         }
         setAlertCount(count);
-      } catch { /* skip */ }
+      } catch {  }
     }
     fetchAlertCount();
   }, [user]);
@@ -146,7 +146,7 @@ export default function App() {
   ];
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh' }}>
+    <div style={{ display: 'flex', minHeight: '100vh', width: '100%' }}>
       {/* Sidebar */}
       <aside className="sidebar">
         <div className="sidebar-brand">

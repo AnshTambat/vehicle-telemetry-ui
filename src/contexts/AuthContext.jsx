@@ -22,7 +22,7 @@ export function AuthProvider({ children }) {
     };
     localStorage.setItem('auth_user', JSON.stringify(userData));
     localStorage.setItem('auth_token', data.token);
-    setUser(userData);
+    setUser(userData); //re-render with new user data
     return userData;
   };
 

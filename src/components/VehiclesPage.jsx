@@ -61,7 +61,6 @@ function VehicleCard({ vehicle, onEdit, onDelete }) {
         <p className="vehicle-card-name">{vehicle.name}</p>
         <div className="vc-meta">
           <span className="vehicle-plate-badge">{vehicle.licensePlate}</span>
-          <span className="vehicle-card-id">ID: {vehicle.vehicleId}</span>
         </div>
       </div>
       <div className="vc-actions">
@@ -229,7 +228,7 @@ export default function VehiclesPage() {
     setSaving(true);
     try {
       await deleteVehicle(deleteModal.vehicleId);
-    } catch { /* best-effort */ }
+    } catch { }
     setDeleteModal(null);
     setSaving(false);
     loadVehicles();

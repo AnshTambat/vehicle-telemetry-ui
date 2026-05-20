@@ -278,6 +278,8 @@ body { margin: 0; }
 .top5-bars::-webkit-scrollbar-thumb,
 .gps-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
 
+
+
 /* ── Fleet status ── */
 .fleet-list { display: flex; flex-direction: column; gap: 0; }
 .fleet-row {
@@ -557,6 +559,12 @@ body { margin: 0; }
   background: var(--text-h); color: var(--card-bg); border-color: var(--text-h);
 }
 .alert-action-btn.primary:hover { opacity: 0.85; }
+.alert-action-btn.resolve {
+  border-color: #16a34a; color: #16a34a;
+}
+.alert-action-btn.resolve:hover { background: #16a34a; color: #fff; }
+[data-theme="dark"] .alert-action-btn.resolve { border-color: #4ade80; color: #4ade80; }
+[data-theme="dark"] .alert-action-btn.resolve:hover { background: #4ade80; color: #000; }
 .alerts-empty {
   text-align: center; padding: 40px 20px; color: var(--text); font-size: 14px;
 }

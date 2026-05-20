@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { getVehicles, getLatestReading, getVehicleSummary } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 
 const parseTS = ts => ts ? new Date(ts.endsWith('Z') ? ts : ts + 'Z') : null;
 
 export default function AlertsPage({ onCountChange }) {
+  const { isAdmin } = useAuth();
   const [alerts, setAlerts]         = useState([]);
   const [loading, setLoading]       = useState(true);
   const [statusFilter, setStatusFilter] = useState('all');
@@ -24,12 +26,12 @@ export default function AlertsPage({ onCountChange }) {
       for (const v of vehicles) {
         let reading = null;
         let summary = null;
-        try { reading = (await getLatestReading(v.vehicleId)).data; } catch { /* skip */ }
-        try { summary = (await getVehicleSummary(v.vehicleId)).data; } catch { /* skip */ }
+        try { reading = (await getLatestReading(v.vehicleId)).data; } catch { }
+        try { summary = (await getVehicleSummary(v.vehicleId)).data; } catch { }
 
         const minutesAgo = reading ? Math.round((Date.now() - parseTS(reading.timestamp).getTime()) / 60000) : null;
 
-        // Engine overheating
+        //Engine overheating
         if (reading && reading.engineTemp > 95) {
           generated.push({
             id: `temp-${v.vehicleId}`,
@@ -43,7 +45,7 @@ export default function AlertsPage({ onCountChange }) {
             status: minutesAgo < 10 ? 'active' : 'resolved',
             ts: reading.timestamp,
           });
-        // High engine temp (between 90-95)
+        //High engine temp (between 90-95)
         } else if (reading && reading.engineTemp > 90) {
           generated.push({
             id: `hightemp-${v.vehicleId}`,
@@ -59,7 +61,7 @@ export default function AlertsPage({ onCountChange }) {
           });
         }
 
-        // Overspeed
+        //Overspeed
         if (reading && reading.speed > 100) {
           generated.push({
             id: `speed-${v.vehicleId}`,
@@ -129,18 +131,22 @@ export default function AlertsPage({ onCountChange }) {
     setAlerts(prev => prev.map(a => a.id === id ? { ...a, status: 'active' } : a));
   }
 
-  // Compute stats
+  function handleResolve(id) {
+    setAlerts(prev => prev.map(a => a.id === id ? { ...a, status: 'resolved' } : a));
+  }
+
+  //Compute stats
   const activeCount = alerts.filter(a => a.status === 'active').length;
   const ackedCount  = alerts.filter(a => a.status === 'acknowledged').length;
   const resolvedCount = alerts.filter(a => a.status === 'resolved').length;
   const totalCount  = alerts.length;
 
-  // Apply filters
+  //Apply filters
   let filtered = [...alerts];
   if (statusFilter !== 'all') filtered = filtered.filter(a => a.status === statusFilter);
   if (typeFilter !== 'all')   filtered = filtered.filter(a => a.severity === typeFilter);
 
-  // Sort
+  //Sort
   if (sort === 'newest') filtered.sort((a, b) => (a.time || 0) - (b.time || 0));
   else filtered.sort((a, b) => (b.time || 0) - (a.time || 0));
 
@@ -154,9 +160,6 @@ export default function AlertsPage({ onCountChange }) {
           <h2>Alerts</h2>
           <p className="alerts-subtitle">All triggered alerts across the fleet</p>
         </div>
-        {/* <button className="alerts-config-btn">
-          Configure rules <span>&#x2197;</span>
-        </button> */}
       </div>
 
       {/* Stat strip */}
@@ -226,7 +229,6 @@ export default function AlertsPage({ onCountChange }) {
         <table className="alerts-table">
           <thead>
             <tr>
-              {/* <th className="col-check"><input type="checkbox" /></th> */}
               <th>Severity</th>
               <th>Vehicle</th>
               <th>Alert</th>
@@ -242,7 +244,6 @@ export default function AlertsPage({ onCountChange }) {
             )}
             {filtered.map(a => (
               <tr key={a.id} className={`alerts-row severity-${a.severity}`}>
-                {/* <td className="col-check"><input type="checkbox" /></td> */}
                 <td>
                   <span className={`severity-badge sev-${a.severity}`}>{a.severity}</span>
                 </td>
@@ -267,7 +268,12 @@ export default function AlertsPage({ onCountChange }) {
                       <button className="alert-action-btn primary" onClick={() => handleAcknowledge(a.id)}>Acknowledge</button>
                     )}
                     {a.status === 'acknowledged' && (
-                      <button className="alert-action-btn" disabled>Acknowledged</button>
+                      <>
+                        <button className="alert-action-btn" disabled>Acknowledged</button>
+                        {isAdmin() && (
+                          <button className="alert-action-btn resolve" onClick={() => handleResolve(a.id)}>Resolve</button>
+                        )}
+                      </>
                     )}
                     {a.status === 'resolved' && (
                       <button className="alert-action-btn" onClick={() => handleReopen(a.id)}>Re-open</button>
